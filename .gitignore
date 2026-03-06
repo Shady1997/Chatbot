@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+test-artifacts/
+
+# CI commits these back — keep local copies out of source control
+playwright-report/
+results/

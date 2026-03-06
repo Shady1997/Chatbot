@@ -1,0 +1,174 @@
+name: Chatbot QA Automation
+
+# ── Triggers ──────────────────────────────────────────────────────────────────
+on:
+  push:
+    branches: [main, master, develop]
+    paths-ignore:
+      - 'playwright-report/**'   # prevent infinite loop after report commit
+      - 'results/**'
+      - '**.md'
+
+  pull_request:
+    branches: [main, master]
+    paths-ignore:
+      - 'playwright-report/**'
+      - 'results/**'
+
+  # Manual trigger — optionally override the chatbot URL
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Base URL of the target application (leave blank for default)'
+        required: false
+        default: ''
+      input_csv:
+        description: 'Path to questions CSV relative to repo root'
+        required: false
+        default: 'data/questions.csv'
+
+# Allow the workflow job to push commits back to the repository
+permissions:
+  contents: write
+
+# ── Job ───────────────────────────────────────────────────────────────────────
+jobs:
+  chatbot-qa:
+    name: Run Chatbot QA — Headless Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # full history needed for clean push-back
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 2. Node.js setup ─────────────────────────────────────────────────────
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ── 3. Install npm dependencies ──────────────────────────────────────────
+      - name: Install dependencies
+        run: npm ci
+
+      # ── 4. Install Chromium (lean — only the one browser we need) ────────────
+      - name: Install Playwright Chromium + OS dependencies
+        run: npx playwright install chromium --with-deps
+
+      # ── 5. Run tests — fully headless ────────────────────────────────────────
+      #   Headless is guaranteed by:
+      #     • playwright.config.ts  →  use: { headless: true }
+      #     • Chromium launch args  →  --no-sandbox --disable-gpu …
+      #     • ubuntu-latest runner has no display server
+      - name: Run Playwright tests
+        env:
+          CI: 'true'
+          BASE_URL:    ${{ github.event.inputs.base_url  || secrets.BASE_URL    || 'http://hasibcore.hasib.com.sa:8090' }}
+          LOGIN_PATH:  ${{ secrets.LOGIN_PATH  || '/HPA.NBU/#!/login' }}
+          APP_USERNAME: ${{ secrets.APP_USERNAME || 'portaladmin' }}
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD || '1234560' }}
+          INPUT_CSV:   ${{ github.event.inputs.input_csv || 'data/questions.csv' }}
+          OUTPUT_DIR:  results
+          CHAT_RESPONSE_TIMEOUT_MS: '120000'
+          INTER_QUESTION_DELAY_MS:  '2000'
+        run: npx playwright test --project=chromium
+        # Always continue so the report + commit steps run even on test failure
+        continue-on-error: true
+
+      # ── 6. Verify index.html was produced ────────────────────────────────────
+      - name: Verify HTML report (index.html)
+        run: |
+          if [ ! -f playwright-report/index.html ]; then
+            echo "❌  playwright-report/index.html not found"
+            exit 1
+          fi
+          SIZE=$(du -sh playwright-report/index.html | cut -f1)
+          echo "✅  playwright-report/index.html exists  (${SIZE})"
+
+      # ── 7. Upload report as downloadable GitHub artifact ─────────────────────
+      - name: Upload HTML report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-run-${{ github.run_number }}
+          path: playwright-report/
+          retention-days: 30
+
+      # ── 8. Upload CSV results as downloadable GitHub artifact ─────────────────
+      - name: Upload CSV results artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chatbot-qa-csv-run-${{ github.run_number }}
+          path: results/
+          if-no-files-found: warn
+          retention-days: 30
+
+      # ── 9. Commit playwright-report/index.html back to the branch ────────────
+      #
+      #   What happens:
+      #     a. Configure git with the Actions bot identity
+      #     b. Pull latest to avoid conflicts
+      #     c. Stage only the HTML report + JSON summary (not videos / traces)
+      #     d. Skip commit if files are unchanged (idempotent)
+      #     e. Push to the branch that triggered this run
+      #
+      #   The report is then accessible at:
+      #     https://github.com/<org>/<repo>/blob/<branch>/playwright-report/index.html
+      #   Or via GitHub Pages (see README for Pages setup).
+      #
+      #   Infinite-loop prevention:
+      #     • paths-ignore on push trigger (above)
+      #     • [skip ci] in commit message
+      #
+      - name: Commit index.html report back to branch
+        if: always()
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Sync with remote before staging changes
+          git pull --rebase origin "${{ github.ref_name }}" || true
+
+          # Stage the report files
+          git add playwright-report/index.html            2>/dev/null || true
+          git add playwright-report/results.json          2>/dev/null || true
+          git add results/                                2>/dev/null || true
+
+          # Only commit when there are real changes
+          if git diff --cached --quiet; then
+            echo "ℹ️  No changes in report — nothing to commit"
+          else
+            TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M UTC')
+            RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+            git commit -m "ci(report): run #${{ github.run_number }} — ${TIMESTAMP}
+
+          Branch  : ${{ github.ref_name }}
+          Actor   : ${{ github.actor }}
+          Run URL : ${RUN_URL}
+          [skip ci]"
+
+            git push origin "HEAD:${{ github.ref_name }}"
+            echo "✅  Committed and pushed playwright-report/index.html to ${{ github.ref_name }}"
+          fi
+
+      # ── 10. Summary ───────────────────────────────────────────────────────────
+      - name: Print report locations
+        if: always()
+        run: |
+          echo ""
+          echo "══════════════════════════════════════════════════════════"
+          echo "  📊  QA Report Summary"
+          echo "══════════════════════════════════════════════════════════"
+          echo "  Artifact (HTML)  → Actions → run #${{ github.run_number }} → Artifacts"
+          echo "  Committed file   → playwright-report/index.html  (${{ github.ref_name }})"
+          echo "  GitHub Pages     → https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+          echo "  CSV results      → results/ (also as artifact)"
+          echo "══════════════════════════════════════════════════════════"
