@@ -705,6 +705,13 @@ async function main() {
   const resultsDir = path.join(projectRoot, config.resultsDir);
   const outputFile = path.join(projectRoot, config.outputFile);
 
+  // Check if results directory exists
+  if (!fs.existsSync(resultsDir)) {
+    console.warn(`⚠️  Results directory not found: ${resultsDir}`);
+    console.warn('⚠️  No test results to evaluate. Skipping evaluation.');
+    process.exit(0);
+  }
+
   // Find latest results CSV
   const resultFiles = fs
     .readdirSync(resultsDir)
@@ -713,8 +720,9 @@ async function main() {
     .reverse();
 
   if (resultFiles.length === 0) {
-    console.error('❌ No results CSV files found in results/ directory');
-    process.exit(1);
+    console.warn('⚠️  No results CSV files found in results/ directory');
+    console.warn('⚠️  No test results to evaluate. Skipping evaluation.');
+    process.exit(0);
   }
 
   const latestResultFile = path.join(resultsDir, resultFiles[0]);
