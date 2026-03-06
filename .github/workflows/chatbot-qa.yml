@@ -123,15 +123,6 @@ jobs:
           fi
 
       # ── 10. Commit and push index.html report back to the branch ──────────────
-          if [ -f playwright-report/index.html ]; then
-            cp playwright-report/index.html index.html
-            echo "✅  Copied playwright-report/index.html → index.html"
-          else
-            echo "❌  playwright-report/index.html not found"
-            exit 1
-          fi
-
-      # ── 10. Commit and push index.html report back to the branch ──────────────
       #
       #   What happens:
       #     a. Configure git with the Actions bot identity
