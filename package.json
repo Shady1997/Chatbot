@@ -20,9 +20,5 @@
   },
   "dependencies": {
     "playwright": "^1.58.2"
-  },
-  "optionalDependencies": {
-    "pdf-parse": "^1.1.1",
-    "docx-parser": "^2.3.0"
   }
 }
