@@ -8,8 +8,7 @@
     "test:debug": "playwright test --debug",
     "test:ui": "playwright test --ui",
     "report": "playwright show-report",
-    "lint": "tsc --noEmit",
-    "enhance-report": "node enhance-report.js"
+    "lint": "tsc --noEmit"
   },
   "devDependencies": {
     "@playwright/test": "^1.44.0",

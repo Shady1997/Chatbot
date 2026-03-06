@@ -81,7 +81,7 @@ jobs:
         # Always continue so the report + commit steps run even on test failure
         continue-on-error: true
 
-      # ── 8. Verify index.html was produced ────────────────────────────────────
+      # ── 6. Verify index.html was produced ────────────────────────────────────
       - name: Verify HTML report (index.html)
         run: |
           if [ ! -f playwright-report/index.html ]; then
@@ -91,11 +91,7 @@ jobs:
           SIZE=$(du -sh playwright-report/index.html | cut -f1)
           echo "✅  playwright-report/index.html exists  (${SIZE})"
 
-      # ── 9. Enhance HTML report with logo and QA results ────────────────────
-      - name: Enhance HTML report
-        run: node enhance-report.js
-
-      # ── 10. Upload report as downloadable GitHub artifact ─────────────────────
+      # ── 7. Upload report as downloadable GitHub artifact ─────────────────────
       - name: Upload HTML report artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -104,7 +100,7 @@ jobs:
           path: playwright-report/
           retention-days: 30
 
-      # ── 11. Upload CSV results as downloadable GitHub artifact ─────────────────
+      # ── 8. Upload CSV results as downloadable GitHub artifact ─────────────────
       - name: Upload CSV results artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -114,7 +110,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-      # ── 12. Copy index.html to root folder ─────────────────────────────
+      # ── 9. Copy index.html report to root folder ─────────────────────────────
       - name: Copy index.html to root folder
         if: always()
         run: |
@@ -126,7 +122,7 @@ jobs:
             exit 1
           fi
 
-      # ── 13. Commit and push index.html report back to the branch ──────────────
+      # ── 10. Commit and push index.html report back to the branch ──────────────
           if [ -f playwright-report/index.html ]; then
             cp playwright-report/index.html index.html
             echo "✅  Copied playwright-report/index.html → index.html"
@@ -186,7 +182,7 @@ jobs:
             echo "✅  Committed and pushed index.html (root + playwright-report/) to ${{ github.ref_name }}"
           fi
 
-      # ── 14. Summary ───────────────────────────────────────────────────────────
+      # ── 11. Summary ───────────────────────────────────────────────────────────
       - name: Print report locations
         if: always()
         run: |
