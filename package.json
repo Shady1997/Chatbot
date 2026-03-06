@@ -8,14 +8,24 @@
     "test:debug": "playwright test --debug",
     "test:ui": "playwright test --ui",
     "report": "playwright show-report",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "evaluate": "node scripts/evaluate-answers.js",
+    "evaluate:ts": "ts-node scripts/evaluate-answers.ts",
+    "test:evaluate": "npm run test && npm run evaluate"
   },
   "devDependencies": {
     "@playwright/test": "^1.44.0",
+    "@types/csv-parse": "^1.7.3",
     "@types/node": "^20.0.0",
+    "csv-parse": "^5.5.0",
+    "ts-node": "^10.9.2",
     "typescript": "^5.4.0"
   },
   "dependencies": {
     "playwright": "^1.58.2"
+  },
+  "optionalDependencies": {
+    "pdf-parse": "^1.1.1",
+    "docx-parser": "^2.3.0"
   }
 }

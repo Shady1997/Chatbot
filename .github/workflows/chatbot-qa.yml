@@ -81,26 +81,31 @@ jobs:
         # Always continue so the report + commit steps run even on test failure
         continue-on-error: true
 
-      # ── 6. Verify index.html was produced ────────────────────────────────────
+      # ── 6. Evaluate answers against knowledge base ───────────────────────────────
+      - name: Evaluate chatbot answers
+        if: always()
+        run: node scripts/evaluate-answers.js
+
+      # ── 7. Verify index.html was produced ────────────────────────────────────
       - name: Verify HTML report (index.html)
         run: |
-          if [ ! -f playwright-report/index.html ]; then
-            echo "❌  playwright-report/index.html not found"
+          if [ ! -f index.html ]; then
+            echo "❌  index.html not found"
             exit 1
           fi
-          SIZE=$(du -sh playwright-report/index.html | cut -f1)
-          echo "✅  playwright-report/index.html exists  (${SIZE})"
+          SIZE=$(du -sh index.html | cut -f1)
+          echo "✅  index.html exists  (${SIZE})"
 
-      # ── 7. Upload report as downloadable GitHub artifact ─────────────────────
+      # ── 8. Upload report as downloadable GitHub artifact ─────────────────────
       - name: Upload HTML report artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-run-${{ github.run_number }}
-          path: playwright-report/
+          name: evaluation-report-run-${{ github.run_number }}
+          path: index.html
           retention-days: 30
 
-      # ── 8. Upload CSV results as downloadable GitHub artifact ─────────────────
+      # ── 9. Upload CSV results as downloadable GitHub artifact ─────────────────
       - name: Upload CSV results artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -109,18 +114,6 @@ jobs:
           path: results/
           if-no-files-found: warn
           retention-days: 30
-
-      # ── 9. Copy index.html report to root folder ─────────────────────────────
-      - name: Copy index.html to root folder
-        if: always()
-        run: |
-          if [ -f playwright-report/index.html ]; then
-            cp playwright-report/index.html index.html
-            echo "✅  Copied playwright-report/index.html → index.html"
-          else
-            echo "❌  playwright-report/index.html not found"
-            exit 1
-          fi
 
       # ── 10. Commit and push index.html report back to the branch ──────────────
       #
@@ -149,7 +142,7 @@ jobs:
           # Sync with remote before staging changes
           git pull --rebase origin "${{ github.ref_name }}" || true
 
-          # Stage the report files (root + playwright-report)
+          # Stage the report files (root index.html + results)
           git add index.html                              2>/dev/null || true
           git add playwright-report/index.html            2>/dev/null || true
           git add playwright-report/results.json          2>/dev/null || true
@@ -181,9 +174,8 @@ jobs:
           echo "══════════════════════════════════════════════════════════"
           echo "  📊  QA Report Summary"
           echo "══════════════════════════════════════════════════════════"
-          echo "  Artifact (HTML)  → Actions → run #${{ github.run_number }} → Artifacts"
+          echo "  Evaluation Report → Actions → run #${{ github.run_number }} → Artifacts"
           echo "  Root file        → index.html (${{ github.ref_name }})"
-          echo "  Committed file   → playwright-report/index.html  (${{ github.ref_name }})"
           echo "  GitHub Pages     → https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
           echo "  CSV results      → results/ (also as artifact)"
           echo "══════════════════════════════════════════════════════════"

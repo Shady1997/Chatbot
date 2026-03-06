@@ -171,3 +171,66 @@ The `ChatbotPage.ask()` method uses three detection strategies in priority order
 3. **Text-stability check** — polls the last bot message until it stops changing for 2.5 s (handles streaming / typewriter responses)
 
 All timeouts are configurable via environment variables.
+
+---
+
+## 🎯 Answer Evaluation System
+
+After running tests, automatically evaluate chatbot answers against your knowledge base!
+
+### Quick Start
+
+```bash
+npm run test:evaluate    # Run tests + evaluation in one command
+```
+
+Then open: **`evaluation-report.html`** in your browser
+
+### What You Get
+
+✓ Beautiful interactive dashboard with evaluation metrics  
+✓ Color-coded results (✓ Correct / ✗ Incorrect)  
+✓ Relevance & Correctness scores for each answer  
+✓ Detailed explanations for every evaluation  
+✓ Interactive filtering (All / Correct / Incorrect)  
+✓ Mobile-responsive design  
+
+### Knowledge Base Integration
+
+Place your knowledge documents in `knowledge/` folder:
+
+```
+knowledge/
+├── Manual.pdf                  # Supported: PDF
+├── FAQ.md                      # Supported: Markdown
+└── Guide.docx                  # Supported: Word docs
+```
+
+The system automatically:
+1. Loads all documents from `knowledge/` folder
+2. Extracts text from PDF/DOCX files
+3. Matches answer keywords against knowledge base
+4. Scores relevance (0-100%) and correctness
+5. Generates professional HTML report
+
+### Available Scripts
+
+```bash
+npm run evaluate             # Evaluate using latest test results
+npm run test:evaluate        # Run tests + evaluation (recommended)
+npm run evaluate:ts          # Use TypeScript version (optional)
+```
+
+### Report Features
+
+| Feature | Details |
+|---------|---------|
+| **Summary Metrics** | Total questions, correct answers, accuracy %, avg scores |
+| **Detailed Results** | Each Q&A with evaluation, scores, category, timing |
+| **Interactive Filters** | Show All / Only Correct / Only Incorrect |
+| **Export Formats** | HTML, CSV, JSON, Markdown |
+
+For more details, see:
+- **QUICK_START.md** — 3-step setup guide
+- **EVALUATION_GUIDE.md** — Complete technical documentation
+- **IMPLEMENTATION_SUMMARY.md** — System overview & features
